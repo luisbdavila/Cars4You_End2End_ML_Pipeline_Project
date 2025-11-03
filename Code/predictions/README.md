@@ -1,0 +1,1 @@
+Folder where the prediction are going to be stored.
