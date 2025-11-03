@@ -6,7 +6,7 @@ The needed libraries are the ones used on ML classes.
 
 To run the code it expect to have a folder structure like this (if not, change the imports and folder paths on the jupyter).
 
-'''
+```plaintext
 Group_XX_notebook/
 ├── Code/
 │   ├── predictions/
@@ -14,6 +14,6 @@ Group_XX_notebook/
 │   │
 │   └── Cars4you.ipynb                 # Main Jupyter notebook containing the ML pipeline
 ├── project_data/                      # Folder containing training and test datasets
-'''
+```
 
 
