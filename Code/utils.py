@@ -1,6 +1,7 @@
 # Imports
 import numpy as np
 from sklearn.metrics import mean_absolute_error
+from tqdm import tqdm
 
 # Functions
 
@@ -19,7 +20,7 @@ def avg_scores(X,
     score_train = []
     score_val = []
     # do the interaction for every k fold
-    for train_index, test_index in CV.split(X, y):
+    for train_index, test_index in tqdm(CV.split(X, y)):
         # split
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
