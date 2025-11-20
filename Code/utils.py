@@ -48,6 +48,3 @@ def avg_scores(X,
 
     score_train_dic[dic_key] = [avg_train, std_train]
     score_val_dic[dic_key] = [avg_val, std_val]
-
-    # return the dictionary scores
-    return score_train_dic, score_val_dic
