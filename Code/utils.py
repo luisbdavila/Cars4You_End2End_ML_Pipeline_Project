@@ -57,9 +57,9 @@ def RFM_Feature_visualization(X, score_train_dic, score_val_dic):
     train_score_list = [value[0] for value in score_train_dic.values()]
     val_score_list = [value[0] for value in score_val_dic.values()]
 
-    plt.plot(list(range(1, Max_features)), train_score_list, label="Score on Training Set", color='dimgray')
-    plt.plot(list(range(1, Max_features)), val_score_list, label="Score on Validation Set", color='steelblue')
+    plt.plot(list(range(1, Max_features)), train_score_list, label="Training Set", color='dimgray')
+    plt.plot(list(range(1, Max_features)), val_score_list, label="Validation Set", color='steelblue')
     plt.xlabel("Number of Features")
-    plt.ylabel("Score")
+    plt.ylabel("MAE")
     plt.legend()
     plt.show()
