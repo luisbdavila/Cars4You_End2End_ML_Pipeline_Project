@@ -38,7 +38,7 @@ def avg_scores(X,
         modelfit = model_.fit(X_train_scl_imp, y_train)
         pred_train = modelfit.predict(X_train_scl_imp)
         pred_test = modelfit.predict(X_test_scl_imp)
-        # calculate MAE and RMSE and append
+        # calculate MAE
         score_train.append(mean_absolute_error(y_train, pred_train))
         score_val.append(mean_absolute_error(y_test, pred_test))
 
@@ -50,16 +50,3 @@ def avg_scores(X,
 
     score_train_dic[dic_key] = [avg_train, std_train]
     score_val_dic[dic_key] = [avg_val, std_val]
-
-
-def RFM_Feature_visualization(X, score_train_dic, score_val_dic):
-    Max_features = X.shape[1] + 1
-    train_score_list = [value[0] for value in score_train_dic.values()]
-    val_score_list = [value[0] for value in score_val_dic.values()]
-
-    plt.plot(list(range(1, Max_features)), train_score_list, label="Training Set", color='dimgray')
-    plt.plot(list(range(1, Max_features)), val_score_list, label="Validation Set", color='steelblue')
-    plt.xlabel("Number of Features")
-    plt.ylabel("MAE")
-    plt.legend()
-    plt.show()
