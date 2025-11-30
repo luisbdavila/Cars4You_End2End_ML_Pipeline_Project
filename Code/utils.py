@@ -15,7 +15,8 @@ def avg_scores(X,
                model,
                score_train_dic,
                score_val_dic,
-               dic_key):
+               dic_key,
+               log_transform=False):
 
     # create lists to store the results from the different models
     score_train = []
@@ -38,6 +39,12 @@ def avg_scores(X,
         modelfit = model_.fit(X_train_scl_imp, y_train)
         pred_train = modelfit.predict(X_train_scl_imp)
         pred_test = modelfit.predict(X_test_scl_imp)
+        # if log transform, revert the transformation to normal scale
+        if log_transform:
+            pred_train = np.exp(pred_train)
+            y_train = np.exp(y_train)
+            pred_test = np.exp(pred_test)
+            y_test = np.exp(y_test)
         # calculate MAE
         score_train.append(mean_absolute_error(y_train, pred_train))
         score_val.append(mean_absolute_error(y_test, pred_test))
