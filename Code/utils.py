@@ -103,3 +103,50 @@ def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val):
                  fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
     plt.show()
+
+
+def model_performance(model, x_train, y_train, x_val, y_val):
+
+    model.fit(x_train, y_train)
+
+    print('Train MAE:', mean_absolute_error(np.exp(y_train),
+                                            np.exp(model.predict(x_train))))
+    print('Validation MAE:', mean_absolute_error(np.exp(y_val),
+                                                 np.exp(model.predict(x_val))))
+
+
+def grid_score(x_train,
+               y_train,
+               x_val,
+               y_val,
+               model,
+               score_train_dic,
+               score_val_dic,
+               dic_key,
+               log_transform=False):
+
+    # fit and predict
+    model_ = model
+    modelfit = model_.fit(x_train, y_train)
+    pred_train = modelfit.predict(x_train)
+    pred_val = modelfit.predict(x_val)
+
+    # if log transform, revert the transformation to normal scale
+    if log_transform:
+        pred_train = np.exp(pred_train)
+        y_train_real = np.exp(y_train)
+        pred_val = np.exp(pred_val)
+        y_val_real = np.exp(y_val)
+    else:
+        y_train_real = y_train
+        y_val_real = y_val
+
+    # Calculate and save MAE
+    score_train_dic[dic_key] = mean_absolute_error(y_train_real, pred_train)
+    score_val_dic[dic_key] = mean_absolute_error(y_val_real, pred_val)
+
+
+def print_cv_results(key, dic_train_MAE, dic_val_MAE):
+    print(f'CV Results - {key}')
+    print(f'Train MAE: {dic_train_MAE[key][0]}, Train std: {dic_train_MAE[key][1]}')
+    print(f'Validation MAE: {dic_val_MAE[key][0]}, Validatin std: {dic_val_MAE[key][1]}')
