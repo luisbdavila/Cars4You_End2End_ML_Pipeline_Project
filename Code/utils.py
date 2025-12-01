@@ -57,3 +57,49 @@ def avg_scores(X,
 
     score_train_dic[dic_key] = [avg_train, std_train]
     score_val_dic[dic_key] = [avg_val, std_val]
+
+
+def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val):
+
+    # 1. Train the model
+    model.fit(X_train, y_train)
+
+    # 2. Make predictions & Inverse Transform (Log -> Real Money)
+    # Training Data
+    y_train_pred = np.exp(model.predict(X_train))
+    y_train_actual = np.exp(y_train)
+
+    # Validation Data
+    y_val_pred = np.exp(model.predict(X_val))
+    y_val_actual = np.exp(y_val)
+
+    # 3. Plotting
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    # Define data pairs for iteration to avoid code repetition
+    plot_data = [
+        (axes[0], y_train_actual, y_train_pred, "Training Set"),
+        (axes[1], y_val_actual, y_val_pred, "Validation Set")
+    ]
+
+    for ax, y_true, y_pred, title in plot_data:
+        ax.scatter(y_true, y_pred, alpha=0.5, s=20, color='steelblue')
+
+        # dynamic limits for the perfect prediction line
+        min_val = min(y_true.min(), y_pred.min())
+        max_val = max(y_true.max(), y_pred.max())
+        ax.plot([min_val, max_val], [min_val, max_val],
+                'r--', lw=2, label='Perfect prediction')
+
+        ax.set_xlabel('Actual Price (£)', fontsize=11)
+        ax.set_ylabel('Predicted Price (£)', fontsize=11)
+        ax.set_title(title, fontsize=12, fontweight='bold')
+        ax.legend()
+        ax.grid(True, linestyle='--', alpha=0.6)
+
+    # Get the model name dynamically
+    model_name = model.__class__.__name__
+    plt.suptitle(f'{model_name} - Actual vs Predicted Price (Original Scale)',
+                 fontsize=14, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    plt.show()
