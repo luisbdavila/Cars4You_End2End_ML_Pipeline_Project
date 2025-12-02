@@ -31,11 +31,11 @@ def avg_scores(X,
         Target vector (log-transformed if specified).
     CV : kfold- repetedkfold- buscar en la clase
         Cross-validation splitter (e.g., KFold).
-    imputer : KNNImputer
+    imputer : TransformerMixin
         Imputer for missing values.
-    scalar : TransformerMixin --- RobustScaler, StandardScaler
+    scalar : TransformerMixin
         Scaler for feature normalization.
-    model : LinearRegression, KNeighborsRegressor, DecisionTreeRegressor
+    model : BaseEstimator
         ML model implementing fit() and predict().
     score_train_dic : dict
         Dictionary where training results will be stored.
@@ -262,11 +262,7 @@ def grid_score(x_train,
 
 
 def print_cv_results(key, dic_train_MAE, dic_val_MAE):
-    print(f'CV Results - {key}')
-    print(f'Train MAE: {dic_train_MAE[key][0]}, Train std: {dic_train_MAE[key][1]}')
-    print(f'Validation MAE: {dic_val_MAE[key][0]}, Validatin std: {dic_val_MAE[key][1]}')
-
-   """
+    """
     Print Stored Cross-Validation Summary
     -------------------------------------
     Displays the stored cross-validated MAE mean and standard deviation for
@@ -285,3 +281,8 @@ def print_cv_results(key, dic_train_MAE, dic_val_MAE):
     -------
     None
     """
+
+    print(f'CV Results - {key}')
+    print(f'Train MAE: {dic_train_MAE[key][0]}, Train std: {dic_train_MAE[key][1]}')
+    print(f'Validation MAE: {dic_val_MAE[key][0]}, Validatin std: {dic_val_MAE[key][1]}')
+
