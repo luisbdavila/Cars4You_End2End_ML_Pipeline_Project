@@ -17,7 +17,41 @@ def avg_scores(X,
                score_val_dic,
                dic_key,
                log_transform=False):
+    """
+    Cross-Validated MAE Computation
+    --------------------------------
+    Performs cross-validation, computes MAE for each fold, and stores the
+    average and the standard deviation for both training and validation sets.
 
+    Parameters
+    ----------
+    X : pd.DataFrame
+        Feature matrix.
+    y : pd.Series
+        Target vector (log-transformed if specified).
+    CV : kfold- repetedkfold- buscar en la clase
+        Cross-validation splitter (e.g., KFold).
+    imputer : KNNImputer
+        Imputer for missing values.
+    scalar : TransformerMixin --- RobustScaler, StandardScaler
+        Scaler for feature normalization.
+    model : LinearRegression, KNeighborsRegressor, DecisionTreeRegressor
+        ML model implementing fit() and predict().
+    score_train_dic : dict
+        Dictionary where training results will be stored.
+    score_val_dic : dict
+        Dictionary where validation results will be stored.
+    dic_key : str
+        Key under which results are saved.
+    log_transform : bool
+        Whether to reverse log-transform before MAE.
+
+    Returns
+    -------
+    None
+        Results are stored in the provided dictionaries.
+    """
+   
     # create lists to store the results from the different models
     score_train = []
     score_val = []
@@ -60,6 +94,31 @@ def avg_scores(X,
 
 
 def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val):
+
+    """
+    Actual vs Predicted Plot
+    ------------------------
+    Fits a model and plots actual versus predicted values for both the
+    training and validation sets (automatically inverse-transforming logs).
+
+    Parameters
+    ----------
+    model : BaseEstimator
+        Model implementing fit() and predict().
+    X_train : np.ndarray
+        Training features.
+    y_train : np.ndarray
+        Log-scaled training targets.
+    X_val : np.ndarray
+        Validation features.
+    y_val : np.ndarray
+        Log-scaled validation targets.
+
+    Returns
+    -------
+    None
+        Displays matplotlib plots.
+    """
 
     # 1. Train the model
     model.fit(X_train, y_train)
@@ -107,6 +166,30 @@ def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val):
 
 def model_performance(model, x_train, y_train, x_val, y_val):
 
+    """
+    Model MAE Performance Summary
+    -----------------------------
+    Fits a model and prints MAE for both training and validation sets using
+    inverse log-transformed predictions and targets.
+
+    Parameters
+    ----------
+    model : BaseEstimator
+        ML model.
+    x_train : np.ndarray
+        Training features.
+    y_train : np.ndarray
+        Log-scaled training targets.
+    x_val : np.ndarray
+        Validation features.
+    y_val : np.ndarray
+        Log-scaled validation targets.
+
+    Returns
+    -------
+    None
+    """
+
     model.fit(x_train, y_train)
 
     print('Train MAE:', mean_absolute_error(np.exp(y_train),
@@ -124,6 +207,38 @@ def grid_score(x_train,
                score_val_dic,
                dic_key,
                log_transform=False):
+    
+    """
+    Grid Search—Single Fit MAE Evaluation
+    -------------------------------------
+    Fits the model once (no cross-validation) and computes training and
+    validation MAE, optionally reversing log-transform.
+
+    Parameters
+    ----------
+    x_train : np.ndarray
+        Training features.
+    y_train : np.ndarray
+        Training targets (log-scaled if needed).
+    x_val : np.ndarray
+        Validation features.
+    y_val : np.ndarray
+        Validation targets (log-scaled if needed).
+    model : BaseEstimator
+        Model to evaluate.
+    score_train_dic : dict
+        Dictionary to store training MAE.
+    score_val_dic : dict
+        Dictionary to store validation MAE.
+    dic_key : str
+        Key for storing results.
+    log_transform : bool
+        Whether to ignore log scale by exponentiating predictions and targets.
+
+    Returns
+    -------
+    None
+    """
 
     # fit and predict
     model_ = model
@@ -150,3 +265,23 @@ def print_cv_results(key, dic_train_MAE, dic_val_MAE):
     print(f'CV Results - {key}')
     print(f'Train MAE: {dic_train_MAE[key][0]}, Train std: {dic_train_MAE[key][1]}')
     print(f'Validation MAE: {dic_val_MAE[key][0]}, Validatin std: {dic_val_MAE[key][1]}')
+
+   """
+    Print Stored Cross-Validation Summary
+    -------------------------------------
+    Displays the stored cross-validated MAE mean and standard deviation for
+    the specified model key.
+
+    Parameters
+    ----------
+    key : str
+        Dictionary key referencing the stored metrics.
+    dic_train_MAE : dict
+        Contains [mean, std] for training MAE.
+    dic_val_MAE : dict
+        Contains [mean, std] for validation MAE.
+
+    Returns
+    -------
+    None
+    """
