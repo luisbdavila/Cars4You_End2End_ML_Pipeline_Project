@@ -2,6 +2,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_absolute_error
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
 from tqdm import tqdm
 
 # Functions
@@ -51,7 +53,46 @@ def avg_scores(X,
     None
         Results are stored in the provided dictionaries.
     """
-   
+
+    # Define the Encoding for Categorical Variables
+    # Transmission OHE
+    ohe_transmission = OneHotEncoder(
+        categories=[['automatic', 'manual', 'semi-auto']],
+        drop=['automatic'],
+        handle_unknown='ignore',
+        sparse_output=False,
+        dtype=int
+        )
+    # FuelType OHE
+    ohe_fuel = OneHotEncoder(
+        categories=[['diesel', 'other', 'petrol']],
+        drop=['diesel'],
+        handle_unknown='ignore',
+        sparse_output=False,
+        dtype=int
+        )
+
+    # Start with the transformers of transmission
+    transformers_columns = [
+        ('enc_trans', ohe_transmission, ['transmission'])
+        ]
+
+    # Conditionally add the fuel transformer
+    # Check if 'fuelType' exists in your training dataframe columns
+    FuelType_exists = 'fuelType' in X.columns
+    if FuelType_exists:
+        transformers_columns.append(('enc_fuel', ohe_fuel, ['fuelType']))
+
+    # Combine into ColumnTransformer
+    preprocessor = ColumnTransformer(
+        transformers=transformers_columns,  # <--- Pass the list here
+        remainder='passthrough',         # Keeps rest variables
+        verbose_feature_names_out=False  # To avoid long feature names
+        )
+
+    # Ensure output is a DataFrame
+    preprocessor.set_output(transform="pandas")
+
     # create lists to store the results from the different models
     score_train = []
     score_val = []
@@ -60,11 +101,27 @@ def avg_scores(X,
         # split
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+        # impute categorial variables
+            # Find mode to fill
+        mode_to_fill_transmission = X_train['transmission'].mode()[0]
+        if FuelType_exists:
+            mode_to_fill_fueltype = X_train['fuelType'].mode()[0]
+            # Fill on train
+        X_train['transmission'].fillna(mode_to_fill_transmission, inplace=True)
+        if FuelType_exists:
+            X_train['fuelType'].fillna(mode_to_fill_fueltype, inplace=True)
+            # Fill on test
+        X_test['transmission'].fillna(mode_to_fill_transmission, inplace=True)
+        if FuelType_exists:
+            X_test['fuelType'].fillna(mode_to_fill_fueltype, inplace=True)
+        # encode
+        X_train = preprocessor.fit_transform(X_train)
+        X_test = preprocessor.transform(X_test)
         # scale
         scaler_ = scalar
         X_train_scl = scaler_.fit_transform(X_train)
         X_test_scl = scaler_.transform(X_test)
-        # impute
+        # impute numerical variables
         imputer_ = imputer
         X_train_scl_imp = imputer_.fit_transform(X_train_scl)
         X_test_scl_imp = imputer_.transform(X_test_scl)
