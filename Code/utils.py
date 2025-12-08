@@ -1,5 +1,6 @@
 # Imports
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_absolute_error
 from sklearn.preprocessing import OneHotEncoder
@@ -343,3 +344,80 @@ def print_cv_results(key, dic_train_MAE, dic_val_MAE):
     print(f'Train MAE: {dic_train_MAE[key][0]}, Train std: {dic_train_MAE[key][1]}')
     print(f'Validation MAE: {dic_val_MAE[key][0]}, Validatin std: {dic_val_MAE[key][1]}')
 
+
+def predict_test_set(
+    test_df,
+    dict_brand_mapping,
+    dict_transmission_mapping,
+    actual_year,
+    mode_to_fill_transmission,
+    train_columns,
+    encoder,
+    scaler,
+    imputer,
+    model,
+    filename,
+    log_transform=False,
+):
+    # Copy test data
+    df_test = test_df.copy()
+    df_test.set_index('carID', inplace=True)
+
+    # Drop irrelevant columns
+    df_test.drop(['model',
+                  'tax',
+                  'previousOwners',
+                  'fuelType',
+                  'paintQuality%',
+                  'hasDamage'], inplace=True, axis=1)
+
+    # Correct numeric columns (negative and impossible values)
+    df_test['year'] = df_test['year'].round().astype('Int64')
+    df_test['mileage'] = pd.to_numeric(df_test['mileage'], errors='coerce').abs()
+    df_test['mpg'] = pd.to_numeric(df_test['mpg'], errors='coerce').abs()
+    df_test['engineSize'] = pd.to_numeric(df_test['engineSize'], errors='coerce').abs()
+    df_test.loc[df_test['engineSize'] < 0.9, 'engineSize'] = 0.9
+
+    # Clean strings
+    df_test = df_test.applymap(lambda x: x.replace(" ", "").lower() if isinstance(x, str) else x)
+
+    # Map categorical values
+    for key, values in dict_brand_mapping.items():
+        df_test.loc[df_test['Brand'].isin(values), 'Brand'] = key
+
+    for key, values in dict_transmission_mapping.items():
+        df_test.loc[df_test['transmission'].isin(values), 'transmission'] = key if key != 'NAN' else np.nan
+
+    # Fill missing categorical values
+    df_test['transmission'].fillna(mode_to_fill_transmission, inplace=True)
+
+    # years old
+    df_test['Years_old'] = actual_year - df_test['year']
+    df_test.drop('year', inplace=True, axis=1)
+
+    # Encode categorical variables as dummies
+    df_test = encoder.transform(df_test)
+
+    # Ensure column order matches training
+    df_test = df_test[train_columns]
+
+    # Scale
+    df_test_scaled = scaler.transform(df_test)
+
+    # Impute missing values
+    df_test_imputed = imputer.transform(df_test_scaled)
+    df_test_to_predict = pd.DataFrame(df_test_imputed, columns=df_test.columns, index=df_test.index)
+
+    # Generate predictions
+    predictions = model.predict(df_test_to_predict)
+
+    if log_transform:
+        predictions = np.exp(predictions)
+
+    # Create predictions DataFrame
+    df_predictions = pd.DataFrame({'price': predictions}, index=df_test_to_predict.index)
+
+    # Save predictions
+    df_predictions.to_csv(f"predictions/{filename}.csv")
+
+    return df_predictions
