@@ -151,7 +151,7 @@ def avg_scores(X,
     score_val_dic[dic_key] = [avg_val, std_val]
 
 
-def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val):
+def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val, log_transform=True):
 
     """
     Actual vs Predicted Plot
@@ -183,12 +183,21 @@ def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val):
 
     # 2. Make predictions & Inverse Transform (Log -> Real Money)
     # Training Data
-    y_train_pred = np.exp(model.predict(X_train))
-    y_train_actual = np.exp(y_train)
+    if log_transform:
+        y_train_pred = np.exp(model.predict(X_train))
+        y_train_actual = np.exp(y_train)
 
-    # Validation Data
-    y_val_pred = np.exp(model.predict(X_val))
-    y_val_actual = np.exp(y_val)
+        # Validation Data
+        y_val_pred = np.exp(model.predict(X_val))
+        y_val_actual = np.exp(y_val)
+
+    else:
+        y_train_pred = model.predict(X_train)
+        y_train_actual = y_train
+
+        # Validation Data
+        y_val_pred = model.predict(X_val)
+        y_val_actual = y_val
 
     # 3. Plotting
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
@@ -222,7 +231,7 @@ def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val):
     plt.show()
 
 
-def model_performance(model, x_train, y_train, x_val, y_val):
+def model_performance(model, x_train, y_train, x_val, y_val, log_transform=True):
 
     """
     Model MAE Performance Summary
@@ -249,12 +258,17 @@ def model_performance(model, x_train, y_train, x_val, y_val):
     """
 
     model.fit(x_train, y_train)
-
-    print('Train MAE:', mean_absolute_error(np.exp(y_train),
+    
+    if log_transform:
+        print('Train MAE:', mean_absolute_error(np.exp(y_train),
                                             np.exp(model.predict(x_train))))
-    print('Validation MAE:', mean_absolute_error(np.exp(y_val),
+        print('Validation MAE:', mean_absolute_error(np.exp(y_val),
                                                  np.exp(model.predict(x_val))))
-
+    else:
+        print('Train MAE:', mean_absolute_error(y_train,
+                                            model.predict(x_train)))
+        print('Validation MAE:', mean_absolute_error(y_val,
+                                                 model.predict(x_val)))
 
 def grid_score(x_train,
                y_train,
