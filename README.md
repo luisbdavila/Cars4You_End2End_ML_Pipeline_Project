@@ -72,7 +72,7 @@ The project utilizes a dataset of used cars containing various attributes releva
 
 + **Features:**
 
-    + **Numerical:** mileage, mpg (miles per gallon), engineSize, tax, year of registration.
+    + **Numerical:** mileage, mpg (miles per gallon), engineSize, tax, year of registration, paintQuality%, previousOwners, hasDamage.
 
     + **Categorical:** brand, model, transmission, fuelType.
 
@@ -95,7 +95,6 @@ Creation of Years_old to better capture the depreciation factor than raw year.
 
 **One-Hot Encoding** for categorical variables.
 
-
 **Scaling:** RobustScaler was chosen over Standard or MinMax scalers to handle outliers effectively (reducing their effect).
 
 **Feature Selection:** Recursive Feature Elimination (RFE), LASSO, and DT feature importance identified the most predictive features: mileage, mpg, engineSize, Years_old, and specific transmission types.
@@ -106,12 +105,12 @@ Extensive Grid Search was performed to tune hyperparameters.
 
 Brand-Specific Modeling: Hypothesis testing revealed that training separate models for each manufacturer (e.g., Audi, BMW, Toyota) yielded better results than a single global model.
 
-Algorithms Used: Linear Regression as beanchmark, Desicion Trees (DT), Neural Networks (NN), Random Forest, Bagging Regressor, and K-Nearest Neighbors (KNN), selected dynamically based on the brand's data characteristics.
+Algorithms Used: Linear Regression as beanchmark, Desicion Trees (DT), Neural Networks (NN), Random Forest, Bagging of DT, AdaBoost, and K-Nearest Neighbors (KNN), selected dynamically based on the brand's data characteristics.
 
 ### Results
 The final brand-specific pipeline demonstrated robust performance on the validation set:
 
-+ Mean Absolute Error (MAE): £1662
++ Mean Absolute Error (MAE): £1662.
 
 + Standard Deviation: £17.67 (indicating stable performance across folds).
 
