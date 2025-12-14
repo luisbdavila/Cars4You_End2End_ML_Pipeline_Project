@@ -398,7 +398,7 @@ def predict_test_set(test_df: pd.DataFrame,
                      actual_year: int,
                      mode_to_fill_transmission: str,
                      train_columns: list[str],
-                     encoder: OneHotEncoder,
+                     encoder: TransformerMixin,
                      scaler: TransformerMixin,
                      imputer: TransformerMixin,
                      model: BaseEstimator,
@@ -419,7 +419,7 @@ def predict_test_set(test_df: pd.DataFrame,
         etc.
     dict_brand_mapping : dict[str, list[str]]
         Maps brand categories (to solve inconsistencies).
-    dict_transmission_mapping : Dict[str, List[str]]
+    dict_transmission_mapping : dict[str, list[str]]
         Maps transmission categories (to solve inconsistencies).
     actual_year : int
         Current year for calculating 'Years_old' feature.
@@ -427,7 +427,7 @@ def predict_test_set(test_df: pd.DataFrame,
         Mode value to fill missing 'transmission' (e.g., 'manual').
     train_columns : list[str]
         Column names from training data to ensure feature alignment.
-    encoder : OneHotEncoder
+    encoder : TransformerMixin
         Fitted encoder for categorical variables.
     scaler : TransformerMixin
         Fitted scaler for numerical features.
@@ -517,15 +517,55 @@ def predict_test_set(test_df: pd.DataFrame,
 
 
 def predict_test_set_brand(
-    test_df,
-    dict_brand_mapping,
-    dict_transmission_mapping,
-    actual_year,
-    train_columns,
-    brands_information,
-    filename,
-    log_transform=False,
-):
+    test_df: pd.DataFrame,
+    dict_brand_mapping: dict[str, list[str]],
+    dict_transmission_mapping: dict[str, list[str]],
+    actual_year: int,
+    train_columns: list[str],
+    brands_information: dict,
+    filename: str,
+    log_transform: bool = False,
+) -> pd.DataFrame:
+    """
+    Generate Brand-Specific Predictions on Test Set
+    -----------------------------------------------
+    Processes raw test data and generates predictions using brand-specific
+    models and preprocessors. For each recognized brand, it applies the
+    corresponding encoder, scaler, imputer, and model. Unrecognized brands
+    fall back to a general 'unknown' model. Saves predictions to a CSV file.
+
+    Parameters
+    ----------
+    test_df : pd.DataFrame
+        Raw test dataset with columns like 'carID', 'Brand',
+        'transmission', etc.
+    dict_brand_mapping : dict[str, list[str]]
+        Maps brand categories to lists of brand names for consistency.
+    dict_transmission_mapping : dict[str, list[str]]
+        Maps transmission categories to lists of transmission types.
+    actual_year : int
+        Current year for calculating 'Years_old' feature.
+    train_columns : List[str]
+        Column names from training data to ensure feature alignment.
+    brands_information : dict
+        Dictionary with brand names as keys. Each value is a dict containing:
+        - 'mode_transmission': str (mode for filling missing transmission)
+        - 'encoder': OneHotEncoder (fitted encoder for the brand)
+        - 'scalar': TransformerMixin (fitted scaler)
+        - 'imputer': TransformerMixin (fitted imputer)
+        - 'model': BaseEstimator (trained model for the brand)
+        Must include an 'unknown' key for fallback.
+    filename : str
+        Base name for output CSV
+        (e.g., 'predictions_brand' -> 'predictions_brand.csv').
+    log_transform : bool, default=False
+        If True, exponentiate predictions to original scale.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with 'price' predictions, indexed by 'carID'.
+    """
     # Copy test data
     df_test = test_df.copy()
     df_test.set_index('carID', inplace=True)
@@ -540,13 +580,17 @@ def predict_test_set_brand(
 
     # Correct numeric columns (negative and impossible values)
     df_test['year'] = df_test['year'].round().astype('Int64')
-    df_test['mileage'] = pd.to_numeric(df_test['mileage'], errors='coerce').abs()
-    df_test['mpg'] = pd.to_numeric(df_test['mpg'], errors='coerce').abs()
-    df_test['engineSize'] = pd.to_numeric(df_test['engineSize'], errors='coerce').abs()
+    df_test['mileage'] = pd.to_numeric(df_test['mileage'],
+                                       errors='coerce').abs()
+    df_test['mpg'] = pd.to_numeric(df_test['mpg'],
+                                   errors='coerce').abs()
+    df_test['engineSize'] = pd.to_numeric(df_test['engineSize'],
+                                          errors='coerce').abs()
     df_test.loc[df_test['engineSize'] < 0.9, 'engineSize'] = 0.9
 
     # Clean strings
-    df_test = df_test.applymap(lambda x: x.replace(" ", "").lower() if isinstance(x, str) else x)
+    df_test = df_test.applymap(lambda x: x.replace(" ", "").lower()
+                               if isinstance(x, str) else x)
 
     # Map categorical values
     for key, values in dict_brand_mapping.items():
@@ -577,7 +621,8 @@ def predict_test_set_brand(
             continue
 
         # Fill missing categorical values
-        test_brand['transmission'].fillna(brands_information[brand]['mode_transmission'], inplace=True)
+        test_brand['transmission'].fillna(brands_information[brand]
+                                          ['mode_transmission'], inplace=True)
 
         # Encode categorical variables as dummies
         test_brand = brands_information[brand]['encoder'].transform(test_brand)
@@ -598,7 +643,8 @@ def predict_test_set_brand(
         if log_transform:
             predictions = np.exp(predictions)
 
-        df_pred_brand = pd.DataFrame({'price': predictions}, index=df_test_to_predict.index)
+        df_pred_brand = pd.DataFrame({'price': predictions},
+                                     index=df_test_to_predict.index)
         df_predictions = pd.concat([df_predictions, df_pred_brand], axis=0)
 
         # If we've predicted all rows, save and return the dataframe
@@ -611,7 +657,8 @@ def predict_test_set_brand(
     test_unknown = df_test.loc[~(df_test['Brand'].isin(saved_brands))].copy()
 
     # Fill missing categorical values
-    test_unknown['transmission'].fillna(brands_information['unknown']['mode_transmission'], inplace=True)
+    test_unknown['transmission'].fillna(brands_information['unknown']
+                                        ['mode_transmission'], inplace=True)
 
     # Encode categorical variables as dummies
     test_unknown = brands_information['unknown']['encoder'].transform(test_unknown)
@@ -632,7 +679,8 @@ def predict_test_set_brand(
     if log_transform:
         predictions = np.exp(predictions)
 
-    df_pred_brand = pd.DataFrame({'price': predictions}, index=df_test_to_predict.index)
+    df_pred_brand = pd.DataFrame({'price': predictions},
+                                 index=df_test_to_predict.index)
     df_predictions = pd.concat([df_predictions, df_pred_brand], axis=0)
 
     # Finalize: save and return the dataframe
