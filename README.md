@@ -19,7 +19,7 @@ CARS4YOU_END2END_ML_PIPELINE_PROJECT/
 │   ├── predictions/                      # Folder to store the predictions of the Deployment
 │   │
 │   ├── Cars4you_Brand_Modeling.ipynb     # Notebook: Open-Ended Section
-│   ├── Cars4you_EDA_Preprocessing.ipynb  # Notebook: Data Exploration and Preprocessing
+│   ├── Cars4you_EDA_Preprocessing.ipynb  # Notebook: Abstract, Bussines Needs and Data Exploration and Preprocessing
 │   ├── Cars4you_Modeling.ipynb           # Notebook: Regression Benchmarking
 │   ├── utils.py                          # Utility functions for the project
 │   └── final_model_col_dics.pkl          # Final objects fitted when predict using brands
