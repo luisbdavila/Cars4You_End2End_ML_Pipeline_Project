@@ -7,44 +7,52 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from tqdm import tqdm
 
+from sklearn.model_selection import BaseCrossValidator
+from sklearn.base import BaseEstimator, TransformerMixin
+
+
 # Functions
 
-
-def avg_scores(X,
-               y,
-               CV,
-               imputer,
-               scalar,
-               model,
-               score_train_dic,
-               score_val_dic,
-               dic_key,
-               log_transform=False):
+def avg_scores(X: pd.DataFrame,
+               y: pd.Series,
+               CV: BaseCrossValidator,
+               imputer: TransformerMixin,
+               scalar: TransformerMixin,
+               model: BaseEstimator,
+               score_train_dic: dict,
+               score_val_dic: dict,
+               dic_key: str | tuple | int,
+               log_transform: bool = False) -> None:
     """
-    Cross-Validated MAE Computation
-    --------------------------------
-    Performs cross-validation, computes MAE for each fold, and stores the
-    average and the standard deviation for both training and validation sets.
+    Cross-Validated Mean Absolute Error (MAE) Computation
+    -----------------------------------------------------
+    Evaluates a machine learning model using cross-validation. For each fold,
+    the function preprocesses the data (encoding categorical variables,
+    scaling, imputing missing values), fits the model, makes predictions,
+    and computes MAE on both training and validation sets. If log-transformed
+    targets are used, predictions and targets are exponentiated back to the
+    original scale before calculating MAE. Stores the average MAE and standard
+    deviation across folds.
 
     Parameters
     ----------
     X : pd.DataFrame
-        Feature matrix.
+        Feature matrix containing numerical and categorical columns.
     y : pd.Series
-        Target vector (log-transformed if specified).
-    CV : kfold- repetedkfold- buscar en la clase
-        Cross-validation splitter (e.g., KFold).
+        Target vector (log-transformed if log_transform=True).
+    CV : BaseCrossValidator
+        Cross-validation splitter (e.g., KFold, RepeatedKFold) defining folds.
     imputer : TransformerMixin
-        Imputer for missing values.
+        Imputer for handling missing numerical values (e.g., KNNImputer).
     scalar : TransformerMixin
-        Scaler for feature normalization.
+        Scaler for standardizing numerical features (e.g., StandardScaler).
     model : BaseEstimator
-        ML model implementing fit() and predict().
+        ML model implementing fit() and predict() (e.g., RandomForestRegressor)
     score_train_dic : dict
-        Dictionary where training results will be stored.
+        Dictionary where training results [mean_MAE, std_MAE] will be stored.
     score_val_dic : dict
-        Dictionary where validation results will be stored.
-    dic_key : str
+        Dictionary where validation results [mean, std] will be stored.
+    dic_key : str | tuple | int
         Key under which results are saved.
     log_transform : bool
         Whether to reverse log-transform before MAE.
@@ -151,26 +159,37 @@ def avg_scores(X,
     score_val_dic[dic_key] = [avg_val, std_val]
 
 
-def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val, log_transform=True):
+def graph_actual_vs_predicted(model: BaseEstimator,
+                              X_train: pd.DataFrame,
+                              y_train: pd.Series,
+                              X_val: pd.DataFrame,
+                              y_val: pd.Series,
+                              log_transform: bool = True) -> None:
 
     """
-    Actual vs Predicted Plot
-    ------------------------
-    Fits a model and plots actual versus predicted values for both the
-    training and validation sets (automatically inverse-transforming logs).
+    Plot Actual vs Predicted Values
+    --------------------------------
+    Fits the model on training data, generates predictions for both training
+    and validation sets, and creates scatter plots of actual vs predicted
+    values. If log-transformed targets are used, both predictions and actuals
+    are exponentiated to the original scale. The plots include a perfect
+    prediction line (y=x) for reference, helping assess model fit and potential
+    overfitting.
 
     Parameters
     ----------
     model : BaseEstimator
         Model implementing fit() and predict().
-    X_train : np.ndarray
-        Training features.
-    y_train : np.ndarray
-        Log-scaled training targets.
-    X_val : np.ndarray
-        Validation features.
-    y_val : np.ndarray
-        Log-scaled validation targets.
+    X_train : pd.DataFrame
+        Preprocessed training features.
+    y_train : pd.Series
+        Training targets (log-scaled if log_transform=True).
+    X_val : pd.DataFrame
+        Preprocessed validation features.
+    y_val : pandas.Series
+        Validation targets (log-scaled if log_transform=True).
+    log_transform : bool, default=True
+        If True, exponentiate predictions and targets for plotting.
 
     Returns
     -------
@@ -231,81 +250,90 @@ def graph_actual_vs_predicted(model, X_train, y_train, X_val, y_val, log_transfo
     plt.show()
 
 
-def model_performance(model, x_train, y_train, x_val, y_val, log_transform=True):
+def model_performance(model: BaseEstimator,
+                      x_train: pd.DataFrame,
+                      y_train: pd.Series,
+                      x_val: pd.DataFrame,
+                      y_val: pd.Series,
+                      log_transform: bool = True) -> None:
 
     """
-    Model MAE Performance Summary
-    -----------------------------
-    Fits a model and prints MAE for both training and validation sets using
-    inverse log-transformed predictions and targets.
+    Print Model MAE Performance Summary
+    -----------------------------------
+    Fits the model on training data and prints the Mean Absolute Error (MAE)
+    for both training and validation sets. If log-transformed targets are used,
+    predictions and targets are exponentiated before calculating MAE.
 
     Parameters
     ----------
     model : BaseEstimator
-        ML model.
-    x_train : np.ndarray
-        Training features.
-    y_train : np.ndarray
-        Log-scaled training targets.
-    x_val : np.ndarray
-        Validation features.
-    y_val : np.ndarray
-        Log-scaled validation targets.
+        ML model to evaluate.
+    x_train : pd.DataFrame
+        Preprocessed training features.
+    y_train : pd.Series
+        Training targets (log-scaled if log_transform=True).
+    x_val : pd.DataFrame
+        Preprocessed validation features.
+    y_val : pd.Series
+        Validation targets (log-scaled if log_transform=True).
+    log_transform : bool, default=True
+        If True, exponentiate predictions and targets before MAE.
 
     Returns
     -------
     None
+        Prints MAE for training and validation sets.
     """
 
     model.fit(x_train, y_train)
     
     if log_transform:
         print('Train MAE:', mean_absolute_error(np.exp(y_train),
-                                            np.exp(model.predict(x_train))))
+                                                np.exp(model.predict(x_train))))
         print('Validation MAE:', mean_absolute_error(np.exp(y_val),
-                                                 np.exp(model.predict(x_val))))
+                                                     np.exp(model.predict(x_val))))
     else:
         print('Train MAE:', mean_absolute_error(y_train,
-                                            model.predict(x_train)))
+                                                model.predict(x_train)))
         print('Validation MAE:', mean_absolute_error(y_val,
-                                                 model.predict(x_val)))
+                                                     model.predict(x_val)))
 
-def grid_score(x_train,
-               y_train,
-               x_val,
-               y_val,
-               model,
-               score_train_dic,
-               score_val_dic,
-               dic_key,
-               log_transform=False):
-    
+def grid_score(x_train: pd.DataFrame,
+               y_train: pd.Series,
+               x_val: pd.DataFrame,
+               y_val: pd.Series,
+               model: BaseEstimator,
+               score_train_dic: dict,
+               score_val_dic: dict,
+               dic_key: str | tuple | int,
+               log_transform: bool = False) -> None:
     """
-    Grid Search—Single Fit MAE Evaluation
-    -------------------------------------
-    Fits the model once (no cross-validation) and computes training and
-    validation MAE, optionally reversing log-transform.
+    Single-Fit MAE Evaluation (Grid Search Helper)
+    -----------------------------------------------
+    Fits the model once on training data, generates predictions for both
+    training and validation sets, and computes MAE. Handles log-transformed
+    targets by exponentiating predictions and targets.
 
     Parameters
     ----------
-    x_train : np.ndarray
-        Training features.
-    y_train : np.ndarray
-        Training targets (log-scaled if needed).
-    x_val : np.ndarray
-        Validation features.
-    y_val : np.ndarray
-        Validation targets (log-scaled if needed).
+    x_train : pd.DataFrame
+        Preprocessed training features.
+    y_train : pd.Series
+        Training targets (log-scaled if log_transform=True).
+    x_val : pd.DataFrame
+        Preprocessed validation features.
+    y_val : pd.Series
+        Validation targets (log-scaled if log_transform=True).
     model : BaseEstimator
-        Model to evaluate.
+        Model to evaluate (e.g., with specific hyperparameters).
     score_train_dic : dict
-        Dictionary to store training MAE.
+        Dictionary to store training MAE (single float value).
     score_val_dic : dict
-        Dictionary to store validation MAE.
-    dic_key : str
-        Key for storing results.
-    log_transform : bool
-        Whether to ignore log scale by exponentiating predictions and targets.
+        Dictionary to store validation MAE (single float value).
+    dic_key : str | tuple | int
+        Key under which MAE values are saved in the dictionaries.
+    log_transform : bool, default=False
+        If True, exponentiate predictions and targets before MAE.
 
     Returns
     -------
@@ -333,46 +361,90 @@ def grid_score(x_train,
     score_val_dic[dic_key] = mean_absolute_error(y_val_real, pred_val)
 
 
-def print_cv_results(key, dic_train_MAE, dic_val_MAE):
+def print_cv_results(key: str,
+                     dic_train_MAE: dict[str, list[float]],
+                     dic_val_MAE: dict[str, list[float]],) -> None:
     """
-    Print Stored Cross-Validation Summary
-    -------------------------------------
+    Print Cross-Validation Results Summary
+    --------------------------------------
     Displays the stored cross-validated MAE mean and standard deviation for
-    the specified model key.
+    a specific model key. Useful for quick inspection of CV performance.
 
     Parameters
     ----------
     key : str
-        Dictionary key referencing the stored metrics.
-    dic_train_MAE : dict
-        Contains [mean, std] for training MAE.
-    dic_val_MAE : dict
-        Contains [mean, std] for validation MAE.
+        Dictionary key referencing the stored metrics (e.g., model name).
+    dic_train_MAE : dict[str, list[float]]
+        Contains [mean_MAE, std_MAE] for training sets.
+    dic_val_MAE : dict[str, list[float]]
+        Contains [mean_MAE, std_MAE] for validation sets.
 
     Returns
     -------
     None
+        Prints the MAE results to console.
     """
 
     print(f'CV Results - {key}')
-    print(f'Train MAE: {dic_train_MAE[key][0]}, Train std: {dic_train_MAE[key][1]}')
-    print(f'Validation MAE: {dic_val_MAE[key][0]}, Validatin std: {dic_val_MAE[key][1]}')
+    print(f'Train MAE: {dic_train_MAE[key][0]}, '
+          f'Train std: {dic_train_MAE[key][1]}')
+    print(f'Validation MAE: {dic_val_MAE[key][0]}, '
+          f'Validation std: {dic_val_MAE[key][1]}')
 
 
-def predict_test_set(
-    test_df,
-    dict_brand_mapping,
-    dict_transmission_mapping,
-    actual_year,
-    mode_to_fill_transmission,
-    train_columns,
-    encoder,
-    scaler,
-    imputer,
-    model,
-    filename,
-    log_transform=False,
-):
+def predict_test_set(test_df: pd.DataFrame,
+                     dict_brand_mapping: dict[str, list[str]],
+                     dict_transmission_mapping: dict,
+                     actual_year: int,
+                     mode_to_fill_transmission: str,
+                     train_columns: list[str],
+                     encoder: OneHotEncoder,
+                     scaler: TransformerMixin,
+                     imputer: TransformerMixin,
+                     model: BaseEstimator,
+                     filename: str,
+                     log_transform: bool = False,) -> pd.DataFrame:
+    """
+    Generate Predictions on Test Set
+    ---------------------------------
+    Processes raw test data through the full preprocessing pipeline (cleaning,
+    encoding, scaling, imputation), applies the trained model to generate
+    predictions, and saves them to a CSV file. Handles categorical mappings,
+    missing value imputation, and optional log-transform reversal.
+
+    Parameters
+    ----------
+    test_df : pd.DataFrame
+        Raw test dataset with columns like 'carID', 'Brand', 'transmission',
+        etc.
+    dict_brand_mapping : dict[str, list[str]]
+        Maps brand categories (to solve inconsistencies).
+    dict_transmission_mapping : Dict[str, List[str]]
+        Maps transmission categories (to solve inconsistencies).
+    actual_year : int
+        Current year for calculating 'Years_old' feature.
+    mode_to_fill_transmission : str
+        Mode value to fill missing 'transmission' (e.g., 'manual').
+    train_columns : list[str]
+        Column names from training data to ensure feature alignment.
+    encoder : OneHotEncoder
+        Fitted encoder for categorical variables.
+    scaler : TransformerMixin
+        Fitted scaler for numerical features.
+    imputer : TransformerMixin
+        Fitted imputer for missing numerical values.
+    model : BaseEstimator
+        Trained model for generating predictions.
+    filename : str
+        Base name for output CSV (e.g., 'predictions' -> 'predictions.csv').
+    log_transform : bool, default=False
+        If True, exponentiate predictions to original scale.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with predictions indexed by carID.
+    """
     # Copy test data
     df_test = test_df.copy()
     df_test.set_index('carID', inplace=True)
@@ -387,20 +459,24 @@ def predict_test_set(
 
     # Correct numeric columns (negative and impossible values)
     df_test['year'] = df_test['year'].round().astype('Int64')
-    df_test['mileage'] = pd.to_numeric(df_test['mileage'], errors='coerce').abs()
+    df_test['mileage'] = pd.to_numeric(df_test['mileage'],
+                                       errors='coerce').abs()
     df_test['mpg'] = pd.to_numeric(df_test['mpg'], errors='coerce').abs()
-    df_test['engineSize'] = pd.to_numeric(df_test['engineSize'], errors='coerce').abs()
+    df_test['engineSize'] = pd.to_numeric(df_test['engineSize'],
+                                          errors='coerce').abs()
     df_test.loc[df_test['engineSize'] < 0.9, 'engineSize'] = 0.9
 
     # Clean strings
-    df_test = df_test.applymap(lambda x: x.replace(" ", "").lower() if isinstance(x, str) else x)
+    df_test = df_test.applymap(lambda x: x.replace(" ", "").lower()
+                               if isinstance(x, str) else x)
 
     # Map categorical values
     for key, values in dict_brand_mapping.items():
         df_test.loc[df_test['Brand'].isin(values), 'Brand'] = key
 
     for key, values in dict_transmission_mapping.items():
-        df_test.loc[df_test['transmission'].isin(values), 'transmission'] = key if key != 'NAN' else np.nan
+        df_test.loc[df_test['transmission'].isin(values),
+                    'transmission'] = key if key != 'NAN' else np.nan
 
     # Fill missing categorical values
     df_test['transmission'].fillna(mode_to_fill_transmission, inplace=True)
@@ -420,7 +496,9 @@ def predict_test_set(
 
     # Impute missing values
     df_test_imputed = imputer.transform(df_test_scaled)
-    df_test_to_predict = pd.DataFrame(df_test_imputed, columns=df_test.columns, index=df_test.index)
+    df_test_to_predict = pd.DataFrame(df_test_imputed,
+                                      columns=df_test.columns,
+                                      index=df_test.index)
 
     # Generate predictions
     predictions = model.predict(df_test_to_predict)
@@ -429,7 +507,8 @@ def predict_test_set(
         predictions = np.exp(predictions)
 
     # Create predictions DataFrame
-    df_predictions = pd.DataFrame({'price': predictions}, index=df_test_to_predict.index)
+    df_predictions = pd.DataFrame({'price': predictions},
+                                  index=df_test_to_predict.index)
 
     # Save predictions
     df_predictions.to_csv(f"predictions/{filename}.csv")
