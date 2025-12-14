@@ -286,7 +286,7 @@ def model_performance(model: BaseEstimator,
     """
 
     model.fit(x_train, y_train)
-    
+
     if log_transform:
         print('Train MAE:', mean_absolute_error(np.exp(y_train),
                                                 np.exp(model.predict(x_train))))

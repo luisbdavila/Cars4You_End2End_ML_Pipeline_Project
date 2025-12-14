@@ -1,1 +1,1 @@
-Folder where the prediction are going to be stored.
+Folder where the prediction are going to be stored (after deployment stage).
