@@ -435,3 +435,128 @@ def predict_test_set(
     df_predictions.to_csv(f"predictions/{filename}.csv")
 
     return df_predictions
+
+
+def predict_test_set_brand(
+    test_df,
+    dict_brand_mapping,
+    dict_transmission_mapping,
+    actual_year,
+    train_columns,
+    brands_information,
+    filename,
+    log_transform=False,
+):
+    # Copy test data
+    df_test = test_df.copy()
+    df_test.set_index('carID', inplace=True)
+
+    # Drop irrelevant columns
+    df_test.drop(['model',
+                  'tax',
+                  'previousOwners',
+                  'fuelType',
+                  'paintQuality%',
+                  'hasDamage'], inplace=True, axis=1)
+
+    # Correct numeric columns (negative and impossible values)
+    df_test['year'] = df_test['year'].round().astype('Int64')
+    df_test['mileage'] = pd.to_numeric(df_test['mileage'], errors='coerce').abs()
+    df_test['mpg'] = pd.to_numeric(df_test['mpg'], errors='coerce').abs()
+    df_test['engineSize'] = pd.to_numeric(df_test['engineSize'], errors='coerce').abs()
+    df_test.loc[df_test['engineSize'] < 0.9, 'engineSize'] = 0.9
+
+    # Clean strings
+    df_test = df_test.applymap(lambda x: x.replace(" ", "").lower() if isinstance(x, str) else x)
+
+    # Map categorical values
+    for key, values in dict_brand_mapping.items():
+        df_test.loc[df_test['Brand'].isin(values), 'Brand'] = key
+
+    for key, values in dict_transmission_mapping.items():
+        df_test.loc[df_test['transmission'].isin(values), 'transmission'] = key if key != 'NAN' else np.nan
+
+    # years old
+    df_test['Years_old'] = actual_year - df_test['year']
+    df_test.drop('year', inplace=True, axis=1)
+
+    # Prepare saved brands list (exclude unknown)
+    saved_brands = list(brands_information.keys())
+    if 'unknown' in saved_brands:
+        saved_brands.remove('unknown')
+
+    # DataFrame to accumulate predictions
+    df_predictions = pd.DataFrame(columns=['price'])
+
+    # do everithing for each brand
+    for brand in saved_brands:
+        # filter by brand
+        test_brand = df_test.loc[df_test['Brand'] == brand].copy()
+
+        # if there is not brand of that type go to the next
+        if test_brand.shape[0] == 0:
+            continue
+
+        # Fill missing categorical values
+        test_brand['transmission'].fillna(brands_information[brand]['mode_transmission'], inplace=True)
+
+        # Encode categorical variables as dummies
+        test_brand = brands_information[brand]['encoder'].transform(test_brand)
+
+        # Ensure column order matches training
+        test_brand = test_brand[train_columns]
+
+        # Scale
+        df_test_scaled = brands_information[brand]['scalar'].transform(test_brand)
+
+        # Impute missing values
+        df_test_imputed = brands_information[brand]['imputer'].transform(df_test_scaled)
+        df_test_to_predict = pd.DataFrame(df_test_imputed, columns=test_brand.columns, index=test_brand.index)
+
+        # Generate predictions
+        predictions = brands_information[brand]['model'].predict(df_test_to_predict)
+
+        if log_transform:
+            predictions = np.exp(predictions)
+
+        df_pred_brand = pd.DataFrame({'price': predictions}, index=df_test_to_predict.index)
+        df_predictions = pd.concat([df_predictions, df_pred_brand], axis=0)
+
+        # If we've predicted all rows, save and return the dataframe
+        if df_predictions.shape[0] == df_test.shape[0]:
+            df_predictions.index.name = 'carID'
+            df_predictions.to_csv(f"predictions/{filename}.csv")
+            return df_predictions
+
+    # Remaining rows -> use 'unknown' (general) model
+    test_unknown = df_test.loc[~(df_test['Brand'].isin(saved_brands))].copy()
+
+    # Fill missing categorical values
+    test_unknown['transmission'].fillna(brands_information['unknown']['mode_transmission'], inplace=True)
+
+    # Encode categorical variables as dummies
+    test_unknown = brands_information['unknown']['encoder'].transform(test_unknown)
+
+    # Ensure column order matches training
+    test_unknown = test_unknown[train_columns]
+
+    # Scale
+    df_test_scaled = brands_information['unknown']['scalar'].transform(test_unknown)
+
+    # Impute missing values
+    df_test_imputed = brands_information['unknown']['imputer'].transform(df_test_scaled)
+    df_test_to_predict = pd.DataFrame(df_test_imputed, columns=test_unknown.columns, index=test_unknown.index)
+
+    # Generate predictions
+    predictions = brands_information['unknown']['model'].predict(df_test_to_predict)
+
+    if log_transform:
+        predictions = np.exp(predictions)
+
+    df_pred_brand = pd.DataFrame({'price': predictions}, index=df_test_to_predict.index)
+    df_predictions = pd.concat([df_predictions, df_pred_brand], axis=0)
+
+    # Finalize: save and return the dataframe
+    df_predictions.index.name = 'carID'
+    df_predictions.to_csv(f"predictions/{filename}.csv")
+    return df_predictions
